@@ -9,10 +9,7 @@ class Generator extends \yii\gii\generators\model\Generator
      */
     public function init()
     {
-        parent::init();
-//xxx;
-//var_dump($this);
-//die('2');
+        return parent::init();
     }
 
     /**
@@ -21,5 +18,15 @@ class Generator extends \yii\gii\generators\model\Generator
     public function getName()
     {
         return 'mj4444 Model Generator';
+    }
+
+   /**
+     * @inheritdoc
+     */
+    public function generate()
+    {
+        $files = parent::generate();
+        // Тут дополняем модели
+        return $files;
     }
 }
