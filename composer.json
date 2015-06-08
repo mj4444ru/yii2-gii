@@ -20,5 +20,8 @@
         "psr-4": {
             "mj4444\\yii2gii\\": ""
         }
+    },
+    "extra": {
+        "bootstrap": "mj4444\\yii2-gii\\Bootstrap"
     }
 }
