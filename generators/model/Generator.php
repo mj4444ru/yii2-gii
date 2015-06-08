@@ -19,7 +19,7 @@ class Generator extends \yii\gii\generators\model\Generator
      */
     public function getName()
     {
-        return 'mj4444 Model Generator';
+        return 'Double Model Generator';
     }
 
    /**

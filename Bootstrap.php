@@ -1,11 +1,10 @@
 <?php
 
-namespace mj4444\yii2-gii;
+namespace mj4444\yii2gii;
 
 use yii\base\Application;
 use yii\base\BootstrapInterface;
 
-die();
 /**
  * Class Bootstrap
  */
