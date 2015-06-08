@@ -22,6 +22,6 @@
         }
     },
     "extra": {
-        "bootstrap": "mj4444\\yii2-gii\\Bootstrap"
+        "bootstrap": "mj4444\\yii2gii\\Bootstrap"
     }
 }
