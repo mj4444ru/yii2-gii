@@ -1,6 +1,6 @@
 <?php
 
-namespace schmunk42\giiant;
+namespace mj4444\yii2-gii;
 
 use yii\base\Application;
 use yii\base\BootstrapInterface;
