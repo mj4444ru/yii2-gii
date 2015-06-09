@@ -23,6 +23,11 @@ class Generator extends \yii\gii\generators\model\Generator
     public $timestampTables = [];
 
     /**
+     * @var string[][]
+     */
+    public $classesConsts = [];
+
+    /**
      * @inheritdoc
      */
     public function init()
@@ -56,6 +61,15 @@ class Generator extends \yii\gii\generators\model\Generator
             } else {
                 $replaceStr = "class {$class}Base extends \\{$baseClass}\n";
                 $content = str_replace($searchStr, $replaceStr, $file->content);
+                if (isset($this->classesConsts[$class])) {
+                    if (($i = strpos($content, "\n{")) !== false) {
+                        $classConsts = $this->classesConsts[$class];
+                        foreach ($classConsts as $key => &$value) {
+                            $value = "    const {$key} = '{$value}';\n";
+                        }
+                        $content = substr_replace($content, implode('', $classConsts)."\n", $i + 3, 0);
+                    }
+                }
                 if (isset($this->timestampTables[$class])) {
                     if (($i = strrpos($content, "\n}")) !== false) {
                         $content = substr_replace($content, "
@@ -91,14 +105,27 @@ class Generator extends \yii\gii\generators\model\Generator
 
     public function generateRules($table)
     {
+        $className = $this->generateClassName($table->name);
         if (isset($table->columns[$this->createdAtAttribute])) {
-            $this->timestampTables[$this->generateClassName($table->name)] = $table->name;
+            $this->timestampTables[$className] = $table->name;
             $table->columns[$this->createdAtAttribute]->autoIncrement = true;
         }
         if (isset($table->columns[$this->updatedAtAttribute])) {
-            $this->timestampTables[$this->generateClassName($table->name)] = $table->name;
+            $this->timestampTables[$className] = $table->name;
             $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
         }
-        return parent::generateRules($table);
+        $rules = parent::generateRules($table);
+        foreach ($table->columns as $column) {
+            if (isset($column->enumValues) && is_array($column->enumValues)) {
+                foreach ($column->enumValues as $enumValue) {
+                    if (!isset($this->classesConsts[$className])) {
+                        $this->classesConsts[$className] = [];
+                    }
+                    $this->classesConsts[$className][strtoupper("{$column->name}_{$enumValue}")] = $enumValue;
+                }
+                $rules[] = "[['{$column->name}'], 'in', 'range' => [{$className}Base::".implode(", {$className}Base::", array_keys($this->classesConsts[$className]))."]]";
+            }
+        }
+        return $rules;
     }
 }
