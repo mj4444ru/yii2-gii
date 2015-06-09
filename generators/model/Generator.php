@@ -65,7 +65,15 @@ class Generator extends \yii\gii\generators\model\Generator
                     if (($i = strpos($content, "\n{")) !== false) {
                         $classConsts = $this->classesConsts[$class];
                         foreach ($classConsts as $key => &$value) {
-                            $value = "    const {$key} = '{$value}';\n";
+                            if (is_array($value)) {
+                                if ($value) {
+                                    $value = "    const {$key} = ['".implode("', '", $value)."'];\n";
+                                } else {
+                                    $value = "    const {$key} = [];\n";
+                                }
+                            } else {
+                                $value = "    const {$key} = '{$value}';\n";
+                            }
                         }
                         $content = substr_replace($content, implode('', $classConsts)."\n", $i + 3, 0);
                     }
@@ -138,11 +146,10 @@ class Generator extends \yii\gii\generators\model\Generator
         foreach ($table->columns as $column) {
             if (isset($column->enumValues) && is_array($column->enumValues)) {
                 foreach ($column->enumValues as $enumValue) {
-                    if (!isset($this->classesConsts[$className])) {
-                        $this->classesConsts[$className] = [];
-                    }
-                    $this->classesConsts[$className][strtoupper("{$column->name}_{$enumValue}")] = $enumValue;
+                    $constName = strtoupper("{$column->name}_{$enumValue}");
+                    $this->classesConsts[$className][$constName] = $enumValue;
                 }
+                $this->classesConsts[$className][strtoupper("{$column->name}__VALUES")] = $column->enumValues;
                 if (strncasecmp($column->dbType, 'enum', 4) == 0) {
                     $rules[] = "[['{$column->name}'], 'in', 'range' => [{$className}Base::".implode(", {$className}Base::", array_keys($this->classesConsts[$className]))."]]";
                 }
