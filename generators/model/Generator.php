@@ -18,7 +18,7 @@ class Generator extends \yii\gii\generators\model\Generator
     public $updatedAtAttribute = 'updated_at';
     /**
      * @var string[]
-     * Index and the value must be the same
+     * Index - class name, Value - table name
      */
     public $timestampTables = [];
 
@@ -55,20 +55,28 @@ class Generator extends \yii\gii\generators\model\Generator
                 $_files[] = $file;
             } else {
                 $replaceStr = "class {$class}Base extends \\{$baseClass}\n";
-                $file1 = new CodeFile(
-                    "{$dirname}/{$class}Base.php",
-                    str_replace($searchStr, $replaceStr, $file->content)
-                );
+                $content = str_replace($searchStr, $replaceStr, $file->content);
+                if (isset($this->timestampTables[$class])) {
+                    if (($i = strrpos($content, "\n}")) !== false) {
+                        $content = substr_replace($content, "
+
+    /**
+     * @inheritdoc
+     */
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::className()
+        ];
+    }", $i, 0);
+                    }
+                }
+                $_files[] = new CodeFile("{$dirname}/{$class}Base.php", $content);
                 $params = [
                     'header' => substr($file->content, 0, $searchStrPos),
                     'className' => $class,
                 ];
-                $file2 = new CodeFile(
-                    "{$dirname}/{$class}.php",
-                    $this->render('model-base.php', $params)
-                );
-                $_files[] = $file1;
-                $_files[] = $file2;
+                $_files[] = new CodeFile("{$dirname}/{$class}.php", $this->render('model-base.php', $params));
             }
         }
         return $_files;
@@ -84,11 +92,11 @@ class Generator extends \yii\gii\generators\model\Generator
     public function generateRules($table)
     {
         if (isset($table->columns[$this->createdAtAttribute])) {
-            $timestampTables[$table->name] = $table->name;
+            $this->timestampTables[$this->generateClassName($table->name)] = $table->name;
             $table->columns[$this->createdAtAttribute]->autoIncrement = true;
         }
         if (isset($table->columns[$this->updatedAtAttribute])) {
-            $timestampTables[$table->name] = $table->name;
+            $this->timestampTables[$this->generateClassName($table->name)] = $table->name;
             $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
         }
         return parent::generateRules($table);
