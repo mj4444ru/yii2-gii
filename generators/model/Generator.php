@@ -7,6 +7,22 @@ use yii\gii\CodeFile;
 class Generator extends \yii\gii\generators\model\Generator
 {
     /**
+     * @var string the attribute that will receive timestamp value
+     * Set this property to false if you do not want to record the creation time.
+     */
+    public $createdAtAttribute = 'created_at';
+    /**
+     * @var string the attribute that will receive timestamp value.
+     * Set this property to false if you do not want to record the update time.
+     */
+    public $updatedAtAttribute = 'updated_at';
+    /**
+     * @var string[]
+     * Index and the value must be the same
+     */
+    public $timestampTables = [];
+
+    /**
      * @inheritdoc
      */
     public function init()
@@ -63,5 +79,18 @@ class Generator extends \yii\gii\generators\model\Generator
         $files = parent::requiredTemplates();
         $files[] = 'model-base.php';
         return $files;
+    }
+
+    public function generateRules($table)
+    {
+        if (isset($table->columns[$this->createdAtAttribute])) {
+            $timestampTables[$table->name] = $table->name;
+            $table->columns[$this->createdAtAttribute]->autoIncrement = true;
+        }
+        if (isset($table->columns[$this->updatedAtAttribute])) {
+            $timestampTables[$table->name] = $table->name;
+            $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
+        }
+        return parent::generateRules($table);
     }
 }
