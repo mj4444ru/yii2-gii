@@ -17,8 +17,15 @@ class Generator extends \yii\gii\generators\model\Generator
      */
     public $updatedAtAttribute = 'updated_at';
     /**
-     * @var string[]
-     * Index - class name, Value - table name
+     * @var callable|Expression The expression that will be used for generating the timestamp.
+     * This can be either an anonymous function that returns the timestamp value,
+     * or an [[Expression]] object representing a DB expression (e.g. `new Expression('NOW()')`).
+     * If not set, it will use the value of `time()` to set the attributes.
+     */
+    public $timestampBehaviorValueString = 'null';
+    /**
+     * @var string[][]
+     * Index - class name, Value - array attributes
      */
     public $timestampTables = [];
 
@@ -26,6 +33,11 @@ class Generator extends \yii\gii\generators\model\Generator
      * @var string[][]
      */
     public $classesConsts = [];
+
+    /**
+     * @var string[][]
+     */
+    public $classesEnumValues = [];
 
     /**
      * @inheritdoc
@@ -65,22 +77,17 @@ class Generator extends \yii\gii\generators\model\Generator
                     if (($i = strpos($content, "\n{")) !== false) {
                         $classConsts = $this->classesConsts[$class];
                         foreach ($classConsts as $key => &$value) {
-                            if (is_array($value)) {
-                                if ($value) {
-                                    $value = "    const {$key} = ['".implode("', '", $value)."'];\n";
-                                } else {
-                                    $value = "    const {$key} = [];\n";
-                                }
-                            } else {
-                                $value = "    const {$key} = '{$value}';\n";
-                            }
+                            $value = "    const {$key} = '{$value}';\n";
                         }
                         $content = substr_replace($content, implode('', $classConsts)."\n", $i + 3, 0);
                     }
                 }
-                if (isset($this->timestampTables[$class])) {
-                    if (($i = strrpos($content, "\n}")) !== false) {
-                        $content = substr_replace($content, "
+                if (($i = strrpos($content, "\n}")) !== false) {
+                    $addContent = "";
+                    if (isset($this->timestampTables[$class])) {
+                        $createdAtAttribute = isset($this->timestampTables[$class]['create']) ? "'".$this->timestampTables[$class]['create']."'" : 'false';
+                        $updatedAtAttribute = isset($this->timestampTables[$class]['update']) ? "'".$this->timestampTables[$class]['update']."'" : 'false';
+                        $addContent .= "
 
     /**
      * @inheritdoc
@@ -88,10 +95,41 @@ class Generator extends \yii\gii\generators\model\Generator
     public function behaviors()
     {
         return [
-            \\yii\\behaviors\\TimestampBehavior::className()
+            [
+                'class' => \\yii\\behaviors\\TimestampBehavior::className(),
+                'createdAtAttribute' => {$createdAtAttribute},
+                'updatedAtAttribute' => {$updatedAtAttribute},
+                'value' => $this->timestampBehaviorValueString
+            ]
         ];
-    }", $i, 0);
+    }";
                     }
+                    if (isset($this->classesEnumValues[$class])) {
+                        $enumValues = [];
+                        foreach ($this->classesEnumValues[$class] as $key => $value) {
+                            if (!$value) {
+                                $enumValues[] = "'{$key}' => []'";
+                            } else {
+                                $enumValues[] = "'{$key}' => [self::".implode(", self::", $value)."]";
+                            }
+                        }
+                        $enumValues = "\$consts = [\n".
+                            "            ".implode(",\n            ", $enumValues)."\n".
+                            "        ];\n".
+                            "        if (is_null(\$field)) {\n".
+                            "            return \$consts;\n".
+                            "        }\n".
+                            "        return isset(\$const[\$field]) ? \$const[\$field] : [];";
+                    } else {
+                        $enumValues = "return [];";
+                    }
+                    $addContent .= "
+
+    public function enumValues(\$field = null)
+    {
+        {$enumValues}
+    }";
+                    $content = substr_replace($content, $addContent,  $i, 0);
                 }
                 $_files[] = new CodeFile("{$dirname}/{$class}Base.php", $content);
                 $params = [
@@ -135,23 +173,25 @@ class Generator extends \yii\gii\generators\model\Generator
     {
         $className = $this->generateClassName($table->name);
         if (isset($table->columns[$this->createdAtAttribute])) {
-            $this->timestampTables[$className] = $table->name;
+            $this->timestampTables[$className]['create'] = $this->createdAtAttribute;
             $table->columns[$this->createdAtAttribute]->autoIncrement = true;
         }
         if (isset($table->columns[$this->updatedAtAttribute])) {
-            $this->timestampTables[$className] = $table->name;
+            $this->timestampTables[$className]['update'] = $this->updatedAtAttribute;
             $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
         }
         $rules = parent::generateRules($table);
         foreach ($table->columns as $column) {
             if (isset($column->enumValues) && is_array($column->enumValues)) {
+                $enumConstants = [];
                 foreach ($column->enumValues as $enumValue) {
                     $constName = strtoupper("{$column->name}_{$enumValue}");
+                    $enumConstants[] = $constName;
                     $this->classesConsts[$className][$constName] = $enumValue;
                 }
-                $this->classesConsts[$className][strtoupper("{$column->name}__VALUES")] = $column->enumValues;
+                $this->classesEnumValues[$className][$column->name] = $enumConstants;
                 if (strncasecmp($column->dbType, 'enum', 4) == 0) {
-                    $rules[] = "[['{$column->name}'], 'in', 'range' => [{$className}Base::".implode(", {$className}Base::", array_keys($this->classesConsts[$className]))."]]";
+                    $rules[] = "[['{$column->name}'], 'in', 'range' => [self::".implode(", self::", array_keys($this->classesConsts[$className]))."]]";
                 }
             }
         }

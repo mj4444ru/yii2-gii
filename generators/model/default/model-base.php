@@ -8,5 +8,25 @@ echo $header;
 ?>
 class <?= $className ?> extends <?= $className ?>Base
 {
+    /**
+     * @inheritdoc
+     */
+    public function attributeLabels()
+    {
+        return array_merge(parent::attributeLabels(), [
+            // add additional translations
+        ]);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function rules()
+    {
+        return array_merge(parent::rules(), [
+            // add additional rules
+        ]);
+    }
+
 <?= $content ?>
 }
