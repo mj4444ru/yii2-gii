@@ -143,7 +143,9 @@ class Generator extends \yii\gii\generators\model\Generator
                     }
                     $this->classesConsts[$className][strtoupper("{$column->name}_{$enumValue}")] = $enumValue;
                 }
-                $rules[] = "[['{$column->name}'], 'in', 'range' => [{$className}Base::".implode(", {$className}Base::", array_keys($this->classesConsts[$className]))."]]";
+                if (strncasecmp($column->dbType, 'enum', 4) == 0) {
+                    $rules[] = "[['{$column->name}'], 'in', 'range' => [{$className}Base::".implode(", {$className}Base::", array_keys($this->classesConsts[$className]))."]]";
+                }
             }
         }
         return $rules;
