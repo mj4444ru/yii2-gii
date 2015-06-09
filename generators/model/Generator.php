@@ -80,7 +80,7 @@ class Generator extends \yii\gii\generators\model\Generator
     public function behaviors()
     {
         return [
-            TimestampBehavior::className()
+            \\yii\\behaviors\\TimestampBehavior::className()
         ];
     }", $i, 0);
                     }
