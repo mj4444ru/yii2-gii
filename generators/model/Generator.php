@@ -89,8 +89,28 @@ class Generator extends \yii\gii\generators\model\Generator
                 $params = [
                     'header' => substr($file->content, 0, $searchStrPos),
                     'className' => $class,
+                    'content' => '',
                 ];
-                $_files[] = new CodeFile("{$dirname}/{$class}.php", $this->render('model-base.php', $params));
+                $file = new CodeFile("{$dirname}/{$class}.php", $this->render('model-base.php', $params));
+                if ($file->operation == 'overwrite') {
+                        $oldFileContent = file_get_contents($file->path);
+                        if (!preg_match('~/\\*\\*(?:.*?) \\*/~s', $file->content, $commentNew)) {
+                            $file = new CodeFile($file->path, $oldFileContent);
+                        } else {
+                            if (!preg_match('~/\\*\\*(?:.*?) \\*/~s', $oldFileContent, $commentOld)) {
+                                $file = new CodeFile($file->path, $oldFileContent);
+                            } else {
+                                $commentNew = reset($commentNew);
+                                $commentOld = reset($commentOld);
+                                if ($commentNew == $commentOld) {
+                                    $file = new CodeFile($file->path, $oldFileContent);
+                                } else {
+                                    $file->content = str_replace($commentOld, $commentNew, $oldFileContent);
+                                }
+                            }
+                        }
+                }
+                $_files[] = $file;
             }
         }
         return $_files;
