@@ -22,7 +22,7 @@ class Generator extends \yii\gii\generators\model\Generator
      * or an [[Expression]] object representing a DB expression (e.g. `new Expression('NOW()')`).
      * If not set, it will use the value of `time()` to set the attributes.
      */
-    public $timestampBehaviorValueString = 'null';
+    public $timestampBehaviorValueString;
     /**
      * @var string[][]
      * Index - class name, Value - array attributes
@@ -98,8 +98,8 @@ class Generator extends \yii\gii\generators\model\Generator
             [
                 'class' => \\yii\\behaviors\\TimestampBehavior::className(),
                 'createdAtAttribute' => {$createdAtAttribute},
-                'updatedAtAttribute' => {$updatedAtAttribute},
-                'value' => $this->timestampBehaviorValueString
+                'updatedAtAttribute' => {$updatedAtAttribute}".($this->timestampBehaviorValueString ? ",
+                'value' => {$this->timestampBehaviorValueString}" : "")."
             ]
         ];
     }";
