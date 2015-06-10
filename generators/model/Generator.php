@@ -119,16 +119,21 @@ class Generator extends \yii\gii\generators\model\Generator
                             "        if (is_null(\$field)) {\n".
                             "            return \$consts;\n".
                             "        }\n".
-                            "        return isset(\$const[\$field]) ? \$const[\$field] : [];";
+                            "        if (isset(\$const[\$field])) {\n".
+                            "            return \$const[\$field];\n".
+                            "        }\n".
+                            "        throw new \\yii\\base\\UnknownPropertyException('Getting unknown property: '.get_called_class().'::'.\$field);";
                     } else {
-                        $enumValues = "return [];";
+                        $enumValues = false;
                     }
-                    $addContent .= "
+                    if ($enumValues) {
+                        $addContent .= "
 
-    public function enumValues(\$field = null)
+    public static function enumValues(\$field = null)
     {
         {$enumValues}
     }";
+                    }
                     $content = substr_replace($content, $addContent,  $i, 0);
                 }
                 $_files[] = new CodeFile("{$dirname}/{$class}Base.php", $content);

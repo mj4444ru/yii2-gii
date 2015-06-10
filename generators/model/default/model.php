@@ -13,4 +13,5 @@
 /* @var $rules string[] list of validation rules */
 /* @var $relations array list of relations (name => relation declaration) */
 
+ksort($relations, SORT_NATURAL);
 require(__DIR__."/../../../../../yiisoft/yii2-gii/generators/model/default/model.php");
