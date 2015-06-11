@@ -3,6 +3,7 @@
 namespace mj4444\yii2gii\generators\model;
 
 use yii\gii\CodeFile;
+use yii\helpers\Inflector;
 
 class Generator extends \yii\gii\generators\model\Generator
 {
@@ -11,11 +12,13 @@ class Generator extends \yii\gii\generators\model\Generator
      * Set this property to false if you do not want to record the creation time.
      */
     public $createdAtAttribute = 'created_at';
+
     /**
      * @var string the attribute that will receive timestamp value.
      * Set this property to false if you do not want to record the update time.
      */
     public $updatedAtAttribute = 'updated_at';
+
     /**
      * @var callable|Expression The expression that will be used for generating the timestamp.
      * This can be either an anonymous function that returns the timestamp value,
@@ -23,6 +26,7 @@ class Generator extends \yii\gii\generators\model\Generator
      * If not set, it will use the value of `time()` to set the attributes.
      */
     public $timestampBehaviorValueString;
+
     /**
      * @var string[][]
      * Index - class name, Value - array attributes
@@ -55,7 +59,7 @@ class Generator extends \yii\gii\generators\model\Generator
         return 'Double Model Generator';
     }
 
-   /**
+    /**
      * @inheritdoc
      */
     public function generate()
@@ -71,24 +75,35 @@ class Generator extends \yii\gii\generators\model\Generator
             if ($searchStrPos === false) {
                 $_files[] = $file;
             } else {
-                $replaceStr = "class {$class}Base extends \\{$baseClass}\n";
-                $content = str_replace($searchStr, $replaceStr, $file->content);
-                if (isset($this->classesConsts[$class])) {
-                    if (($i = strpos($content, "\n{")) !== false) {
-                        $classConsts = $this->classesConsts[$class];
-                        foreach ($classConsts as $key => &$value) {
-                            $value = "    const {$key} = '{$value}';\n";
-                        }
-                        $content = substr_replace($content, implode('', $classConsts)."\n", $i + 3, 0);
-                    }
-                }
-                if (($i = strrpos($content, "\n}")) !== false) {
-                    $addContent = "";
-                    if (isset($this->timestampTables[$class])) {
-                        $createdAtAttribute = isset($this->timestampTables[$class]['create']) ? "'".$this->timestampTables[$class]['create']."'" : 'false';
-                        $updatedAtAttribute = isset($this->timestampTables[$class]['update']) ? "'".$this->timestampTables[$class]['update']."'" : 'false';
-                        $addContent .= "
+                $_files[] = $this->generateFileBase($file->content, $class, $baseClass, $dirname, $searchStr);
+                $header = substr($file->content, 0, $searchStrPos);
+                $_files[] = $this->generateFilePrimary($class, $dirname, $header);
+            }
+        }
+        return $_files;
+    }
 
+    public function generateFileBaseConst(&$content, $class)
+    {
+        if (isset($this->classesConsts[$class])) {
+            if (($i = strpos($content, "\n{")) !== false) {
+                $classConsts = $this->classesConsts[$class];
+                foreach ($classConsts as $key => &$value) {
+                    $value = "    const {$key} = '{$value}';\n";
+                }
+                $content = substr_replace($content, implode('', $classConsts)."\n", $i + 3, 0);
+            }
+        }
+    }
+
+    public function generateFileBaseTimestamp(&$content, $class)
+    {
+        if (isset($this->timestampTables[$class])) {
+            if (($i = strrpos($content, "\n}")) !== false) {
+                $ts = $this->timestampTables[$class];
+                $createdAtAttribute = isset($ts['create']) ? "'".$ts['create']."'" : 'false';
+                $updatedAtAttribute = isset($ts['update']) ? "'".$ts['update']."'" : 'false';
+                $addContent = "\n
     /**
      * @inheritdoc
      */
@@ -103,68 +118,73 @@ class Generator extends \yii\gii\generators\model\Generator
             ]
         ];
     }";
-                    }
-                    if (isset($this->classesEnumValues[$class])) {
-                        $enumValues = [];
-                        foreach ($this->classesEnumValues[$class] as $key => $value) {
-                            if (!$value) {
-                                $enumValues[] = "'{$key}' => []'";
-                            } else {
-                                $enumValues[] = "'{$key}' => [self::".implode(", self::", $value)."]";
-                            }
-                        }
-                        $enumValues = "\$consts = [\n".
-                            "            ".implode(",\n            ", $enumValues)."\n".
-                            "        ];\n".
-                            "        if (is_null(\$field)) {\n".
-                            "            return \$consts;\n".
-                            "        }\n".
-                            "        if (isset(\$const[\$field])) {\n".
-                            "            return \$const[\$field];\n".
-                            "        }\n".
-                            "        throw new \\yii\\base\\UnknownPropertyException('Getting unknown property: '.get_called_class().'::'.\$field);";
-                    } else {
-                        $enumValues = false;
-                    }
-                    if ($enumValues) {
-                        $addContent .= "
-
-    public static function enumValues(\$field = null)
-    {
-        {$enumValues}
-    }";
-                    }
-                    $content = substr_replace($content, $addContent,  $i, 0);
-                }
-                $_files[] = new CodeFile("{$dirname}/{$class}Base.php", $content);
-                $params = [
-                    'header' => substr($file->content, 0, $searchStrPos),
-                    'className' => $class,
-                    'content' => '',
-                ];
-                $file = new CodeFile("{$dirname}/{$class}.php", $this->render('model-base.php', $params));
-                if ($file->operation == 'overwrite') {
-                        $oldFileContent = file_get_contents($file->path);
-                        if (!preg_match('~/\\*\\*(?:.*?) \\*/~s', $file->content, $commentNew)) {
-                            $file = new CodeFile($file->path, $oldFileContent);
-                        } else {
-                            if (!preg_match('~/\\*\\*(?:.*?) \\*/~s', $oldFileContent, $commentOld)) {
-                                $file = new CodeFile($file->path, $oldFileContent);
-                            } else {
-                                $commentNew = reset($commentNew);
-                                $commentOld = reset($commentOld);
-                                if ($commentNew == $commentOld) {
-                                    $file = new CodeFile($file->path, $oldFileContent);
-                                } else {
-                                    $file->content = str_replace($commentOld, $commentNew, $oldFileContent);
-                                }
-                            }
-                        }
-                }
-                $_files[] = $file;
+                $content = substr_replace($content, $addContent, $i, 0);
             }
         }
-        return $_files;
+    }
+
+    public function generateFileBaseAttributeEnumLabels(&$content, $class)
+    {
+        if (isset($this->classesEnumValues[$class]) && $this->classesEnumValues[$class]) {
+            if (($i = strrpos($content, "\n}")) !== false) {
+                $enumValues = '';
+                foreach ($this->classesEnumValues[$class] as $key => $value) {
+                    $enumAttrValues = '';
+                    foreach ($value as $attrEnumName) {
+                        $attrEnumValue = $this->generateString(Inflector::camel2words($attrEnumName));
+                        $enumAttrValues .= "                '{$attrEnumName}' => {$attrEnumValue},\n";
+                    }
+                    $enumValues .= "            '{$key}' => [
+{$enumAttrValues}            ],\n";
+                }
+                $addContent = "\n
+    public function attributeEnumLabels()
+    {
+        return [
+{$enumValues}        ];
+    }";
+                $content = substr_replace($content, $addContent, $i, 0);
+            }
+        }
+    }
+
+    public function generateFileBase($content, $class, $baseClass, $dirname, $searchStr)
+    {
+        $replaceStr = "class {$class}Base extends \\{$baseClass}\n";
+        $content = str_replace($searchStr, $replaceStr, $content);
+        $this->generateFileBaseConst($content, $class);
+        $this->generateFileBaseTimestamp($content, $class);
+        $this->generateFileBaseAttributeEnumLabels($content, $class);
+        return new CodeFile("{$dirname}/{$class}Base.php", $content);
+    }
+
+    public function generateFilePrimary($class, $dirname, $header)
+    {
+        $params = [
+            'header' => $header,
+            'className' => $class,
+            'content' => '',
+        ];
+        $file = new CodeFile("{$dirname}/{$class}.php", $this->render('model-base.php', $params));
+        if ($file->operation == 'overwrite') {
+            $oldFileContent = file_get_contents($file->path);
+            if (!preg_match('~/\\*\\*(?:.*?) \\*/~s', $file->content, $commentNew)) {
+                $file = new CodeFile($file->path, $oldFileContent);
+            } else {
+                if (!preg_match('~/\\*\\*(?:.*?) \\*/~s', $oldFileContent, $commentOld)) {
+                    $file = new CodeFile($file->path, $oldFileContent);
+                } else {
+                    $commentNew = reset($commentNew);
+                    $commentOld = reset($commentOld);
+                    if ($commentNew == $commentOld) {
+                        $file = new CodeFile($file->path, $oldFileContent);
+                    } else {
+                        $file->content = str_replace($commentOld, $commentNew, $oldFileContent);
+                    }
+                }
+            }
+        }
+        return $file;
     }
 
     public function requiredTemplates()
@@ -188,15 +208,16 @@ class Generator extends \yii\gii\generators\model\Generator
         $rules = parent::generateRules($table);
         foreach ($table->columns as $column) {
             if (isset($column->enumValues) && is_array($column->enumValues)) {
-                $enumConstants = [];
+                $enumValues = [];
                 foreach ($column->enumValues as $enumValue) {
                     $constName = strtoupper("{$column->name}_{$enumValue}");
-                    $enumConstants[] = $constName;
+                    $enumValues[] = $enumValue;
                     $this->classesConsts[$className][$constName] = $enumValue;
                 }
-                $this->classesEnumValues[$className][$column->name] = $enumConstants;
+                $this->classesEnumValues[$className][$column->name] = $enumValues;
                 if (strncasecmp($column->dbType, 'enum', 4) == 0) {
-                    $rules[] = "[['{$column->name}'], 'in', 'range' => [self::".implode(", self::", array_keys($this->classesConsts[$className]))."]]";
+                    $enumValues = "'".implode("', '", $enumValues)."'";
+                    $rules[] = "[['{$column->name}'], 'in', 'range' => [{$enumValues}]]";
                 }
             }
         }
