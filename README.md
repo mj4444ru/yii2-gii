@@ -8,7 +8,7 @@ Installation
 
 The preferred way to install this extension is through [composer](http://getcomposer.org/download/).
 
-    composer.phar require mj4444/yii2-gii:"*"
+    php composer.phar require --dev --prefer-dist mj4444/yii2-gii
 
 The generators are registered automatically in the application bootstrap process, if the Gii module is enabled
 

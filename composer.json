@@ -5,6 +5,7 @@
     "type": "yii2-extension",
     "license": "BSD-3-Clause",
     "support": {
+        "issues": "https://github.com/mj4444ru/yii2-gii/issues",
         "source": "https://github.com/mj4444ru/yii2-gii"
     },
     "authors": [
@@ -13,6 +14,7 @@
             "email": "mj4444@mail.ru"
         }
     ],
+    "minimum-stability": "dev",
     "require": {
         "yiisoft/yii2-gii": "~2.0"
     },
