@@ -22,18 +22,18 @@ For basic usage instructions see the [Yii2 Guide section for Gii](http://www.yii
 Differences from standard generator
 -----------------------------------
 
-Additional class of models for user code
-Autogenerate validators for fields enum
-Autogenerate constants for fields and enum set
-Autogenerate behaviors for models containing fields handled TimestampBehavior
+- Additional class of models for user code
+- Autogenerate validators for fields enum
+- Autogenerate constants for fields and enum set
+- Autogenerate behaviors for models containing fields handled TimestampBehavior
 
 Отличия от стандартного генератора
 ----------------------------------
 
-Дополнительный класс модели для пользовательского кода
-Автогенерация валидаторов для полей enum
-Автогенерация констант для полей enum и set
-Автогенерация behaviors для моделей содержащих поля обрабатываемые TimestampBehavior
+- Дополнительный класс модели для пользовательского кода
+- Автогенерация валидаторов для полей enum
+- Автогенерация констант для полей enum и set
+- Автогенерация behaviors для моделей содержащих поля обрабатываемые TimestampBehavior
 
 Links
 -----
