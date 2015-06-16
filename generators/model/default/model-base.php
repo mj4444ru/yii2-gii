@@ -6,7 +6,7 @@
 
 echo $header;
 ?>
-class <?= $className ?> extends <?= $className ?>Base
+class <?= $className ?> extends Base<?= $className ?>
 {
     /**
      * @inheritdoc

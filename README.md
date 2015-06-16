@@ -26,6 +26,8 @@ Differences from standard generator
 - Autogenerate validators for fields enum
 - Autogenerate constants for fields and enum set
 - Autogenerate behaviors for models containing fields handled TimestampBehavior
+- Table 'migration' is excluded from autogeneration (configurable)
+- Can configure ignore list tables
 
 Отличия от стандартного генератора
 ----------------------------------
@@ -34,6 +36,8 @@ Differences from standard generator
 - Автогенерация валидаторов для полей enum
 - Автогенерация констант для полей enum и set
 - Автогенерация behaviors для моделей содержащих поля обрабатываемые TimestampBehavior
+- Таблица 'migration' исключается из автогенерации (настраивается)
+- Возможно настроить список игнорируемых таблиц
 
 Links
 -----

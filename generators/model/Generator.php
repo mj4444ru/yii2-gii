@@ -44,6 +44,11 @@ class Generator extends \yii\gii\generators\model\Generator
     public $classesEnumValues = [];
 
     /**
+     * @var string[]
+     */
+    public $excludedTables = ['migration'];
+
+    /**
      * @inheritdoc
      */
     public function init()
@@ -57,6 +62,22 @@ class Generator extends \yii\gii\generators\model\Generator
     public function getName()
     {
         return 'Double Model Generator';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected function getTableNames()
+    {
+        $tables = parent::getTableNames();
+        if (count($tables) > 1) {
+            $_this = $this;
+            $checker = function($val) use ($_this) {
+                return !in_array($val, $_this->excludedTables);
+            };
+            $tables = array_filter($tables, $checker);
+        }
+        return $tables;
     }
 
     /**
@@ -150,12 +171,12 @@ class Generator extends \yii\gii\generators\model\Generator
 
     public function generateFileBase($content, $class, $baseClass, $dirname, $searchStr)
     {
-        $replaceStr = "class {$class}Base extends \\{$baseClass}\n";
+        $replaceStr = "class Base{$class} extends \\{$baseClass}\n";
         $content = str_replace($searchStr, $replaceStr, $content);
         $this->generateFileBaseConst($content, $class);
         $this->generateFileBaseTimestamp($content, $class);
         $this->generateFileBaseAttributeEnumLabels($content, $class);
-        return new CodeFile("{$dirname}/{$class}Base.php", $content);
+        return new CodeFile("{$dirname}/Base{$class}.php", $content);
     }
 
     public function generateFilePrimary($class, $dirname, $header)
