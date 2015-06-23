@@ -23,21 +23,23 @@ Differences from standard generator
 -----------------------------------
 
 - Additional class of models for user code
-- Autogenerate validators for fields enum
+- Autogenerate validators for fields enum (possible partial/full deactivation)
 - Autogenerate constants for fields and enum set
 - Autogenerate behaviors for models containing fields handled TimestampBehavior
 - Table 'migration' is excluded from autogeneration (configurable)
 - Can configure ignore list tables
+- Completely redesigned creating names for relations
 
 Отличия от стандартного генератора
 ----------------------------------
 
 - Дополнительный класс модели для пользовательского кода
-- Автогенерация валидаторов для полей enum
+- Автогенерация валидаторов для полей enum (возможно частичное/полное отключение)
 - Автогенерация констант для полей enum и set
 - Автогенерация behaviors для моделей содержащих поля обрабатываемые TimestampBehavior
 - Таблица 'migration' исключается из автогенерации (настраивается)
 - Возможно настроить список игнорируемых таблиц
+- Полностью переработано создание имён для связей
 
 Links
 -----

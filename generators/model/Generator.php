@@ -49,6 +49,11 @@ class Generator extends \yii\gii\generators\model\Generator
     public $excludedTables = ['migration'];
 
     /**
+     * @var boolean|string[]
+     */
+    public $enumWithoutValidators = false;
+
+    /**
      * @inheritdoc
      */
     public function init()
@@ -226,8 +231,9 @@ class Generator extends \yii\gii\generators\model\Generator
             $this->timestampTables[$className]['update'] = $this->updatedAtAttribute;
             $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
         }
-        $rules = parent::generateRules($table);
-        foreach ($table->columns as $column) {
+        $rules = [];
+        $enumWiVa = $this->enumWithoutValidators;
+        foreach ($table->columns as $columnIndex => $column) {
             if (isset($column->enumValues) && is_array($column->enumValues)) {
                 $enumValues = [];
                 foreach ($column->enumValues as $enumValue) {
@@ -238,10 +244,123 @@ class Generator extends \yii\gii\generators\model\Generator
                 $this->classesEnumValues[$className][$column->name] = $enumValues;
                 if (strncasecmp($column->dbType, 'enum', 4) == 0) {
                     $enumValues = "'".implode("', '", $enumValues)."'";
-                    $rules[] = "[['{$column->name}'], 'in', 'range' => [{$enumValues}]]";
+                    $addValidator = !$enumWiVa || (is_array($enumWiVa) && !in_array($table->name, $enumWiVa));
+                    if ($addValidator) {
+                        $rules[] = "[['{$column->name}'], 'in', 'range' => [{$enumValues}], 'strict' => true]";
+                    }
                 }
             }
         }
+        $rules = array_merge(parent::generateRules($table), $rules);
         return $rules;
+    }
+
+    private function generateRelationsSort(&$relations)
+    {
+        $unchangedRelations = [];
+        $result = ['simple' => [], 'viaTable' => []];
+        foreach ($relations as $tableName => $tableRelations) {
+            $unchangedRelations[$tableName] = [];
+            foreach ($tableRelations as $relationName => $relation) {
+                if ($relationName{0} == '@') {
+                    $result['simple'][] = [
+                        'tableName' => $tableName,
+                        'oldName' => substr($relationName, 1),
+                        'relation' => $relation
+                    ];
+                } elseif (strpos($relation[0], ')->viaTable(') !== false) {
+                    $result['viaTable'][] = [
+                        'tableName' => $tableName,
+                        'oldName' => $relationName,
+                        'relation' => $relation];
+                } else {
+                    $unchangedRelations[$tableName][$relationName] = $relation;
+                }
+            }
+        }
+        $relations = $unchangedRelations;
+        return $result;
+    }
+
+    private function generateRelationsAddSimpleRelations(&$relations, $simpleRelations)
+    {
+        $db = $this->getDbConnection();
+        foreach ($simpleRelations as $simpleRelation) {
+            $tableName = $simpleRelation['tableName'];
+            $code = $simpleRelation['relation'][0];
+            $pregTableName = preg_quote('_'.$tableName);
+            $key = $simpleRelation['relation'][1];
+            if (preg_match("/\\['(\\w+?){$pregTableName}_(\\w+?)' => '\\2'\\]/", $code, $match)) {
+                $key = $match[1].$key;
+            } elseif (preg_match("/\\['(\\w+?)_(\\w+?)' => '\\2'\\]/", $code, $match)) {
+                if ($tableName != $match[1]) {
+                    $key = $match[1].$key;
+                }
+            } elseif (preg_match("/\\['(\\w+?)' => '(\\w+?)'\\]/", $code, $match)) {
+                if ($match[1] != $match[2]) {
+                    $key = $match[1].$key;
+                }
+            }
+            $tableSchema = $db->getTableSchema($tableName);
+            $newRelName = parent::generateRelationName($relations, $tableSchema, $key, $simpleRelation['relation'][2]);
+            $relations[$tableName][$newRelName] = $simpleRelation['relation'];
+        }
+    }
+
+    private function generateRelationsAddViaTableRelations(&$relations, $viaTableRelations)
+    {
+        $db = $this->getDbConnection();
+        foreach ($viaTableRelations as $viaTableRelation) {
+            $tableName = $viaTableRelation['tableName'];
+            $code = $viaTableRelation['relation'][0];
+            $key = $viaTableRelation['relation'][1];
+            $multiple = $viaTableRelation['relation'][2];
+            if (preg_match("/viaTable\\('(\{\{%)?(\w+?)(\}\})?',/", $code, $match)) {
+                if ($multiple) {
+                    $key = Inflector::pluralize($key);
+                    $multiple = false;
+                }
+                $key = $key.'Via_'.$match[2];
+            }
+            $tableSchema = $db->getTableSchema($tableName);
+            $newRelName = parent::generateRelationName($relations, $tableSchema, $key, $multiple);
+            $relations[$tableName][$newRelName] = $viaTableRelation['relation'];
+        }
+    }
+
+    protected function generateRelations()
+    {
+        $relations = parent::generateRelations();
+        $sortedRelations = $this->generateRelationsSort($relations);
+        $this->generateRelationsAddSimpleRelations($relations, $sortedRelations['simple']);
+        $this->generateRelationsAddViaTableRelations($relations, $sortedRelations['viaTable']);
+        return $relations;
+    }
+
+    protected function generateRelationName($relations, $table, $key, $multiple)
+    {
+        if (!$multiple && isset($table->primaryKey[0]) && $table->primaryKey[0] === $key) {
+            $newKey = false;
+            foreach ($table->foreignKeys as $refs) {
+                $refTable = $refs[0];
+                unset($refs[0]);
+                $fks = array_keys($refs);
+                if ($fks[0] === $key) {
+                    if (count($fks) == 1) {
+                        $newKey = $refTable;
+                    } else {
+                        $newKey = false;
+                        break;
+                    }
+                }
+            }
+            if ($newKey) {
+                $key = $newKey;
+            }
+        }
+        if (ctype_upper($key{0})) {
+            $key = "@{$key}";
+        }
+        return parent::generateRelationName($relations, $table, $key, $multiple);
     }
 }
