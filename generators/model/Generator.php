@@ -277,30 +277,18 @@ class Generator extends \yii\gii\generators\model\Generator
         return array_merge(parent::generateRules($table), $rules);
     }
 
-    private function generateRelationsSort(&$relations)
+    private function generateRelationsSort($relations)
     {
-        $unchangedRelations = [];
         $result = ['simple' => [], 'viaTable' => []];
         foreach ($relations as $tableName => $tableRelations) {
-            $unchangedRelations[$tableName] = [];
             foreach ($tableRelations as $relationName => $relation) {
-                if ($relationName{0} == '@') {
-                    $result['simple'][] = [
-                        'tableName' => $tableName,
-                        'oldName' => substr($relationName, 1),
-                        'relation' => $relation
-                    ];
-                } elseif (strpos($relation[0], ')->viaTable(') !== false) {
-                    $result['viaTable'][] = [
-                        'tableName' => $tableName,
-                        'oldName' => $relationName,
-                        'relation' => $relation];
-                } else {
-                    $unchangedRelations[$tableName][$relationName] = $relation;
-                }
+                $viaTable = strpos($relation[0], ')->viaTable(') !== false;
+                $result[$viaTable ? 'viaTable' : 'simple'][] = [
+                    'tableName' => $tableName,
+                    'oldName' => $relationName,
+                    'relation' => $relation];
             }
         }
-        $relations = $unchangedRelations;
         return $result;
     }
 
@@ -318,6 +306,8 @@ class Generator extends \yii\gii\generators\model\Generator
                 if ($tableName != $match[1]) {
                     $key = $match[1].$key;
                 }
+            } elseif (preg_match("/\\['(\\w+?)' => '(\\w+?)_\\1'\\]/", $code, $match)) {
+                $key = $match[2];
             } elseif (preg_match("/\\['(\\w+?)' => '(\\w+?)'\\]/", $code, $match)) {
                 if ($match[1] != $match[2]) {
                     $key = $match[1].$key;
@@ -352,8 +342,8 @@ class Generator extends \yii\gii\generators\model\Generator
 
     protected function generateRelations()
     {
-        $relations = parent::generateRelations();
-        $sortedRelations = $this->generateRelationsSort($relations);
+        $relations = [];
+        $sortedRelations = $this->generateRelationsSort(parent::generateRelations());
         $this->generateRelationsAddSimpleRelations($relations, $sortedRelations['simple']);
         $this->generateRelationsAddViaTableRelations($relations, $sortedRelations['viaTable']);
         return $relations;
@@ -361,28 +351,6 @@ class Generator extends \yii\gii\generators\model\Generator
 
     protected function generateRelationName($relations, $table, $key, $multiple)
     {
-        if (!$multiple && isset($table->primaryKey[0]) && $table->primaryKey[0] === $key) {
-            $newKey = false;
-            foreach ($table->foreignKeys as $refs) {
-                $refTable = $refs[0];
-                unset($refs[0]);
-                $fks = array_keys($refs);
-                if ($fks[0] === $key) {
-                    if (count($fks) == 1) {
-                        $newKey = $refTable;
-                    } else {
-                        $newKey = false;
-                        break;
-                    }
-                }
-            }
-            if ($newKey) {
-                $key = $newKey;
-            }
-        }
-        if (ctype_upper($key{0})) {
-            $key = "@{$key}";
-        }
         return parent::generateRelationName($relations, $table, $key, $multiple);
     }
 }
