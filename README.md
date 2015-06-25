@@ -23,6 +23,7 @@ Differences from standard generator
 -----------------------------------
 
 - Additional class of models for user code
+- Autogenerate validators for default values
 - Autogenerate validators for fields enum (possible partial/full deactivation)
 - Autogenerate constants for fields and enum set
 - Autogenerate behaviors for models containing fields handled TimestampBehavior
@@ -34,6 +35,7 @@ Differences from standard generator
 ----------------------------------
 
 - Дополнительный класс модели для пользовательского кода
+- Автогенерация валидаторов для значений по умолчанию
 - Автогенерация валидаторов для полей enum (возможно частичное/полное отключение)
 - Автогенерация констант для полей enum и set
 - Автогенерация behaviors для моделей содержащих поля обрабатываемые TimestampBehavior

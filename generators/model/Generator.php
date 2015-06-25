@@ -232,27 +232,40 @@ class Generator extends \yii\gii\generators\model\Generator
             $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
         }
         $rules = [];
-        $enumWiVa = $this->enumWithoutValidators;
+//
+//        ['country', 'default', 'value' => 'USA'],
+//        if ($table->name == 'paypal_payout')
+//            var_dump($table->columns);
+//
+//        defaultValue
         foreach ($table->columns as $columnIndex => $column) {
-            if (isset($column->enumValues) && is_array($column->enumValues)) {
-                $enumValues = [];
-                foreach ($column->enumValues as $enumValue) {
-                    $constName = strtoupper("{$column->name}_{$enumValue}");
-                    $enumValues[] = $enumValue;
-                    $this->classesConsts[$className][$constName] = $enumValue;
-                }
-                $this->classesEnumValues[$className][$column->name] = $enumValues;
-                if (strncasecmp($column->dbType, 'enum', 4) == 0) {
-                    $enumValues = "'".implode("', '", $enumValues)."'";
-                    $addValidator = !$enumWiVa || (is_array($enumWiVa) && !in_array($table->name, $enumWiVa));
-                    if ($addValidator) {
-                        $rules[] = "[['{$column->name}'], 'in', 'range' => [{$enumValues}], 'strict' => true]";
+            if (isset($column->defaultValue) && $column->defaultValue !== null) {
+//                var_dump($column);
+                $value = var_export($column->defaultValue, true);
+                $rules[] = "[['{$column->name}'], 'default', 'value' => {$value}]";
+            }
+        }
+        $enumWiVa = $this->enumWithoutValidators;
+        if ($enumWiVa === false || is_array($enumWiVa)) {
+            foreach ($table->columns as $columnIndex => $column) {
+                if (isset($column->enumValues) && is_array($column->enumValues)) {
+                    $enumValues = [];
+                    foreach ($column->enumValues as $enumValue) {
+                        $constName = strtoupper("{$column->name}_{$enumValue}");
+                        $enumValues[] = $enumValue;
+                        $this->classesConsts[$className][$constName] = $enumValue;
+                    }
+                    $this->classesEnumValues[$className][$column->name] = $enumValues;
+                    if (strncasecmp($column->dbType, 'enum', 4) == 0) {
+                        $enumValues = "'".implode("', '", $enumValues)."'";
+                        if (!is_array($enumWiVa) || !in_array($table->name, $enumWiVa)) {
+                            $rules[] = "[['{$column->name}'], 'in', 'range' => [{$enumValues}], 'strict' => true]";
+                        }
                     }
                 }
             }
         }
-        $rules = array_merge(parent::generateRules($table), $rules);
-        return $rules;
+        return array_merge(parent::generateRules($table), $rules);
     }
 
     private function generateRelationsSort(&$relations)
