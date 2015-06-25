@@ -232,15 +232,8 @@ class Generator extends \yii\gii\generators\model\Generator
             $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
         }
         $rules = [];
-//
-//        ['country', 'default', 'value' => 'USA'],
-//        if ($table->name == 'paypal_payout')
-//            var_dump($table->columns);
-//
-//        defaultValue
         foreach ($table->columns as $columnIndex => $column) {
             if (isset($column->defaultValue) && $column->defaultValue !== null) {
-//                var_dump($column);
                 $value = var_export($column->defaultValue, true);
                 $rules[] = "[['{$column->name}'], 'default', 'value' => {$value}]";
             }
