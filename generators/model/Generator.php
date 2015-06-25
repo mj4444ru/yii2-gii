@@ -232,14 +232,23 @@ class Generator extends \yii\gii\generators\model\Generator
             $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
         }
         $rules = [];
+        $defaultRules = [];
         foreach ($table->columns as $columnIndex => $column) {
             if (isset($column->defaultValue) && $column->defaultValue !== null) {
                 $value = var_export($column->defaultValue, true);
-                $rules[] = "[['{$column->name}'], 'default', 'value' => {$value}]";
+                $defaultRules[serialize($value)][] = $column->name;
+            }
+        }
+        if ($defaultRules) {
+            foreach ($defaultRules as $value => $columns) {
+                $value = unserialize($value);
+                $columns = "'".implode("', '", $columns)."'";
+                $rules[] = "[[{$columns}], 'default', 'value' => {$value}]";
             }
         }
         $enumWiVa = $this->enumWithoutValidators;
         if ($enumWiVa === false || is_array($enumWiVa)) {
+            $inRules = [];
             foreach ($table->columns as $columnIndex => $column) {
                 if (isset($column->enumValues) && is_array($column->enumValues)) {
                     $enumValues = [];
@@ -250,11 +259,18 @@ class Generator extends \yii\gii\generators\model\Generator
                     }
                     $this->classesEnumValues[$className][$column->name] = $enumValues;
                     if (strncasecmp($column->dbType, 'enum', 4) == 0) {
-                        $enumValues = "'".implode("', '", $enumValues)."'";
                         if (!is_array($enumWiVa) || !in_array($table->name, $enumWiVa)) {
-                            $rules[] = "[['{$column->name}'], 'in', 'range' => [{$enumValues}], 'strict' => true]";
+                            $enumValues = "'".implode("', '", $enumValues)."'";
+                            $inRules[serialize($enumValues)][] = $column->name;
                         }
                     }
+                }
+            }
+            if ($inRules) {
+                foreach ($inRules as $values => $columns) {
+                    $values = unserialize($values);
+                    $columns = "'".implode("', '", $columns)."'";
+                    $rules[] = "[[{$columns}], 'in', 'range' => [{$values}], 'strict' => true]";
                 }
             }
         }
