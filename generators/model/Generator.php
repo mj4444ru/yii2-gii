@@ -302,6 +302,8 @@ class Generator extends \yii\gii\generators\model\Generator
             $key = $simpleRelation['relation'][1];
             if (preg_match("/\\['(\\w+?){$pregTableName}_(\\w+?)' => '\\2'\\]/", $code, $match)) {
                 $key = $match[1].$key;
+            } elseif (preg_match("/\\['(\\w+?){$pregTableName}' => '(\\w+?)'\\]/", $code, $match)) {
+                $key = $match[1].$key;
             } elseif (preg_match("/\\['(\\w+?)_(\\w+?)' => '\\2'\\]/", $code, $match)) {
                 if ($tableName != $match[1]) {
                     $key = $match[1].$key;
@@ -310,7 +312,11 @@ class Generator extends \yii\gii\generators\model\Generator
                 $key = $match[2];
             } elseif (preg_match("/\\['(\\w+?)' => '(\\w+?)'\\]/", $code, $match)) {
                 if ($match[1] != $match[2]) {
-                    $key = $match[1].$key;
+                    if ($simpleRelation['oldName']{0} == '@') {
+                        $key = $match[1].$key;
+                    } else {
+                        $key = $match[2];
+                    }
                 }
             }
             $tableSchema = $db->getTableSchema($tableName);
@@ -351,6 +357,9 @@ class Generator extends \yii\gii\generators\model\Generator
 
     protected function generateRelationName($relations, $table, $key, $multiple)
     {
+        if (ctype_upper($key{0})) {
+            $key = "@{$key}";
+        }
         return parent::generateRelationName($relations, $table, $key, $multiple);
     }
 }
