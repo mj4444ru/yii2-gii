@@ -54,6 +54,11 @@ class Generator extends \yii\gii\generators\model\Generator
     public $enumWithoutValidators = false;
 
     /**
+     * @var boolean
+     */
+    public $requiredStrict = false;
+
+    /**
      * @inheritdoc
      */
     public function init()
@@ -249,7 +254,22 @@ class Generator extends \yii\gii\generators\model\Generator
         $enumWiVa = $this->enumWithoutValidators;
         if ($enumWiVa === false || is_array($enumWiVa)) {
             $inRules = [];
+            $eachInRules = [];
             foreach ($table->columns as $columnIndex => $column) {
+                    // Bug <
+        if (preg_match('/^(\w+)(?:\(([^\)]+)\))?/', $column->dbType, $matches)) {
+            $type = strtolower($matches[1]);
+            if (!empty($matches[2])) {
+                if ($type === 'set') {
+                    $values = explode(',', $matches[2]);
+                    foreach ($values as $i => $value) {
+                        $values[$i] = trim($value, "'");
+                    }
+                    $column->enumValues = $values;
+                }
+            }
+        }
+                    // Bug >
                 if (isset($column->enumValues) && is_array($column->enumValues)) {
                     $enumValues = [];
                     foreach ($column->enumValues as $enumValue) {
@@ -264,6 +284,12 @@ class Generator extends \yii\gii\generators\model\Generator
                             $inRules[serialize($enumValues)][] = $column->name;
                         }
                     }
+                    if (strncasecmp($column->dbType, 'set', 3) == 0) {
+                        if (!is_array($enumWiVa) || !in_array($table->name, $enumWiVa)) {
+                            $enumValues = "'".implode("', '", $enumValues)."'";
+                            $eachInRules[serialize($enumValues)][] = $column->name;
+                        }
+                    }
                 }
             }
             if ($inRules) {
@@ -273,8 +299,23 @@ class Generator extends \yii\gii\generators\model\Generator
                     $rules[] = "[[{$columns}], 'in', 'range' => [{$values}], 'strict' => true]";
                 }
             }
+            if ($eachInRules) {
+                foreach ($eachInRules as $values => $columns) {
+                    $values = unserialize($values);
+                    $columns = "'".implode("Array', '", $columns)."Array'";
+                    $rules[] = "[[{$columns}], 'each', 'rule' => ['in', 'range' => [{$values}], 'strict' => true]]";
+                }
+            }
         }
-        return array_merge(parent::generateRules($table), $rules);
+        $baseRules = parent::generateRules($table);
+        if ($this->requiredStrict) {
+            foreach ($baseRules as &$rule) {
+                if (!substr_compare($rule, ", 'required']", -13, 13)) {
+                    $rule = substr($rule, 0, -1).", 'strict' => true]";
+                }
+            }
+        }
+        return array_merge($baseRules, $rules);
     }
 
     private function generateRelationsSort($relations)

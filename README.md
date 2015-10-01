@@ -19,6 +19,12 @@ Visit your application's Gii (eg. `index.php?r=gii` and choose one of the genera
 
 For basic usage instructions see the [Yii2 Guide section for Gii](http://www.yiiframework.com/doc-2.0/guide-tool-gii.html).
 
+```php
+if (!YII_ENV_TEST) {
+    Yii::$container->set('mj4444\yii2gii\generators\model\Generator', ['requiredStrict' => true]);
+}
+```
+
 Differences from standard generator
 -----------------------------------
 
