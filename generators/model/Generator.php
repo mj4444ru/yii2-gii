@@ -236,8 +236,11 @@ class Generator extends \yii\gii\generators\model\Generator
             $this->timestampTables[$className]['update'] = $this->updatedAtAttribute;
             $table->columns[$this->updatedAtAttribute]->autoIncrement = true;
         }
+        $firstRusles = [];
         $rules = [];
         $defaultRules = [];
+        $setNullColumns = [];
+        $requiredColumns = [];
         foreach ($table->columns as $columnIndex => $column) {
             if (isset($column->defaultValue) && $column->defaultValue !== null) {
                 $value = var_export($column->defaultValue, true);
@@ -279,6 +282,11 @@ class Generator extends \yii\gii\generators\model\Generator
                     }
                     $this->classesEnumValues[$className][$column->name] = $enumValues;
                     if (strncasecmp($column->dbType, 'enum', 4) == 0) {
+                        if (!$column->allowNull) {
+                            $setNullColumns[] = $column->name;
+                        } else {
+                            $requiredColumns[] = $column->name;
+                        }
                         if (!is_array($enumWiVa) || !in_array($table->name, $enumWiVa)) {
                             $enumValues = "'".implode("', '", $enumValues)."'";
                             $inRules[serialize($enumValues)][] = $column->name;
@@ -308,14 +316,23 @@ class Generator extends \yii\gii\generators\model\Generator
             }
         }
         $baseRules = parent::generateRules($table);
+        if ($requiredColumns) {
+            $rules[] = "[['".implode("','", $requiredColumns)."'], 'required']";
+        }
+        if ($setNullColumns) {
+            $rules[] = "[['".implode("','", $setNullColumns)."'], 'default', 'value' => null]";
+        }
         if ($this->requiredStrict) {
             foreach ($baseRules as &$rule) {
                 if (!substr_compare($rule, ", 'required']", -13, 13)) {
                     $rule = substr($rule, 0, -1).", 'strict' => true]";
                 }
+                if (!substr_compare($rule, ", 'integer']", -12, 12)) {
+                    $firstRusles[] = substr($rule, 0, -9)."default', 'value' => null]";
+                }
             }
         }
-        return array_merge($baseRules, $rules);
+        return array_merge($firstRusles, $baseRules, $rules);
     }
 
     private function generateRelationsSort($relations)
