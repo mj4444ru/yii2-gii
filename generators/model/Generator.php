@@ -316,21 +316,22 @@ class Generator extends \yii\gii\generators\model\Generator
             }
         }
         $baseRules = parent::generateRules($table);
-        if ($requiredColumns) {
-            $rules[] = "[['".implode("','", $requiredColumns)."'], 'required']";
-        }
-        if ($setNullColumns) {
-            $rules[] = "[['".implode("','", $setNullColumns)."'], 'default', 'value' => null]";
-        }
         if ($this->requiredStrict) {
             foreach ($baseRules as &$rule) {
                 if (!substr_compare($rule, ", 'required']", -13, 13)) {
                     $rule = substr($rule, 0, -1).", 'strict' => true]";
                 }
                 if (!substr_compare($rule, ", 'integer']", -12, 12)) {
-                    $firstRusles[] = substr($rule, 0, -9)."default', 'value' => null]";
+                    //$firstRusles[] = substr($rule, 0, -9)."default', 'value' => null]";
+                    $setNullColumns[] = substr($rule, 3, -14);
                 }
             }
+        }
+        if ($requiredColumns) {
+            $rules[] = "[['".implode("', '", $requiredColumns)."'], 'required']";
+        }
+        if ($setNullColumns) {
+            $firstRusles[] = "[['".implode("', '", $setNullColumns)."'], 'default', 'value' => null]";
         }
         return array_merge($firstRusles, $baseRules, $rules);
     }
