@@ -282,7 +282,7 @@ class Generator extends \yii\gii\generators\model\Generator
                     }
                     $this->classesEnumValues[$className][$column->name] = $enumValues;
                     if (strncasecmp($column->dbType, 'enum', 4) == 0) {
-                        if (!$column->allowNull) {
+                        if ($column->allowNull) {
                             $setNullColumns[] = $column->name;
                         } else {
                             $requiredColumns[] = $column->name;
