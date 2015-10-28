@@ -276,7 +276,7 @@ class Generator extends \yii\gii\generators\model\Generator
                 if (isset($column->enumValues) && is_array($column->enumValues)) {
                     $enumValues = [];
                     foreach ($column->enumValues as $enumValue) {
-                        $constName = strtoupper("{$column->name}_{$enumValue}");
+                        $constName = preg_replace('~[^A-Z1-9_]~', '_', strtoupper("{$column->name}_{$enumValue}"));
                         $enumValues[] = $enumValue;
                         $this->classesConsts[$className][$constName] = $enumValue;
                     }
