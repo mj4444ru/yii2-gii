@@ -28,25 +28,5 @@ class <?= $className ?> extends Base<?= $className ?>
         ]);
     }
 
-/*
-    public function __get($name)
-    {
-        if (!substr_compare($name, 'Array', -5, 5)) {
-            $value = parent::__get(substr($name, 0, -5));
-            return $value && is_string($value) ? explode(',', $value) : [];
-        }
-        return parent::__get($name);
-    }
-
-    public function __set($name, $value)
-    {
-        if (!substr_compare($name, 'Array', -5, 5)) {
-            parent::__set(substr($name, 0, -5), is_array($value) ? implode(',', $value) : '');
-        } else {
-            parent::__set($name, $value);
-        }
-    }
-*/
-
 <?= $content ?>
 }
