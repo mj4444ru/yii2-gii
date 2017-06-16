@@ -54,6 +54,11 @@ class Generator extends \yii\gii\generators\model\Generator
     public $enumWithoutValidators = false;
 
     /**
+     * @var boolean|string[]
+     */
+    public $foreignKeysWithoutValidators = false;
+
+    /**
      * @var boolean
      */
     public $requiredStrict = false;
@@ -326,6 +331,15 @@ class Generator extends \yii\gii\generators\model\Generator
                     $setNullColumns[] = substr($rule, 3, -14);
                 }
             }
+            unset($rule);
+        }
+        $fkWiVa = $this->foreignKeysWithoutValidators;
+        if ($fkWiVa === true || (is_array($fkWiVa) && in_array($table->name, $fkWiVa))) {
+            foreach ($baseRules as $i => $rule) {
+                if (strpos($rule, ", 'exist', 'skipOnError' => true,") !== false) {
+                    unset($baseRules[$i]);
+                }
+            }
         }
         if ($requiredColumns) {
             $rules[] = "[['".implode("', '", $requiredColumns)."'], 'required']";
@@ -354,8 +368,13 @@ class Generator extends \yii\gii\generators\model\Generator
     private function generateRelationsAddSimpleRelations(&$relations, $simpleRelations)
     {
         $db = $this->getDbConnection();
+        $tablePrefix = $db->tablePrefix;
         foreach ($simpleRelations as $simpleRelation) {
-            $tableName = $simpleRelation['tableName'];
+            $fullTableName = $simpleRelation['tableName'];
+            $tableName = $fullTableName;
+            if ($tablePrefix && strpos($tableName, $tablePrefix) === 0) {
+                $tableName = substr($tableName, strlen($tablePrefix));
+            }
             $code = $simpleRelation['relation'][0];
             $pregTableName = preg_quote('_'.$tableName);
             $key = $simpleRelation['relation'][1];
@@ -378,9 +397,9 @@ class Generator extends \yii\gii\generators\model\Generator
                     }
                 }
             }
-            $tableSchema = $db->getTableSchema($tableName);
+            $tableSchema = $db->getTableSchema($fullTableName);
             $newRelName = parent::generateRelationName($relations, $tableSchema, $key, $simpleRelation['relation'][2]);
-            $relations[$tableName][$newRelName] = $simpleRelation['relation'];
+            $relations[$fullTableName][$newRelName] = $simpleRelation['relation'];
         }
     }
 
