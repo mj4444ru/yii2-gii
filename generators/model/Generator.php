@@ -56,6 +56,11 @@ class Generator extends \yii\gii\generators\model\Generator
     /**
      * @var boolean|string[]
      */
+    public $uniqueKeysWithoutValidators = false;
+
+    /**
+     * @var boolean|string[]
+     */
     public $foreignKeysWithoutValidators = false;
 
     /**
@@ -332,6 +337,14 @@ class Generator extends \yii\gii\generators\model\Generator
                 }
             }
             unset($rule);
+        }
+        $unWiVa = $this->uniqueKeysWithoutValidators;
+        if ($unWiVa === true || (is_array($unWiVa) && in_array($table->name, $unWiVa))) {
+            foreach ($baseRules as $i => $rule) {
+                if (strpos($rule, ", 'unique'") !== false) {
+                    unset($baseRules[$i]);
+                }
+            }
         }
         $fkWiVa = $this->foreignKeysWithoutValidators;
         if ($fkWiVa === true || (is_array($fkWiVa) && in_array($table->name, $fkWiVa))) {
