@@ -132,7 +132,7 @@ class Generator extends \yii\gii\generators\model\Generator
                 foreach ($classConsts as $key => &$value) {
                     $value = "    const {$key} = '{$value}';\n";
                 }
-                $content = substr_replace($content, implode('', $classConsts)."\n", $i + 3, 0);
+                $content = substr_replace($content, implode('', $classConsts) . "\n", $i + 3, 0);
             }
         }
     }
@@ -142,8 +142,8 @@ class Generator extends \yii\gii\generators\model\Generator
         if (isset($this->timestampTables[$class])) {
             if (($i = strrpos($content, "\n}")) !== false) {
                 $ts = $this->timestampTables[$class];
-                $createdAtAttribute = isset($ts['create']) ? "'".$ts['create']."'" : 'false';
-                $updatedAtAttribute = isset($ts['update']) ? "'".$ts['update']."'" : 'false';
+                $createdAtAttribute = isset($ts['create']) ? "'" . $ts['create'] . "'" : 'false';
+                $updatedAtAttribute = isset($ts['update']) ? "'" . $ts['update'] . "'" : 'false';
                 $addContent = "\n
     /**
      * @inheritdoc
@@ -154,8 +154,8 @@ class Generator extends \yii\gii\generators\model\Generator
             [
                 'class' => \\yii\\behaviors\\TimestampBehavior::className(),
                 'createdAtAttribute' => {$createdAtAttribute},
-                'updatedAtAttribute' => {$updatedAtAttribute}".($this->timestampBehaviorValueString ? ",
-                'value' => {$this->timestampBehaviorValueString}" : "")."
+                'updatedAtAttribute' => {$updatedAtAttribute}" . ($this->timestampBehaviorValueString ? ",
+                'value' => {$this->timestampBehaviorValueString}" : "") . "
             ]
         ];
     }";
@@ -260,7 +260,7 @@ class Generator extends \yii\gii\generators\model\Generator
         if ($defaultRules) {
             foreach ($defaultRules as $value => $columns) {
                 $value = unserialize($value);
-                $columns = "'".implode("', '", $columns)."'";
+                $columns = "'" . implode("', '", $columns) . "'";
                 $rules[] = "[[{$columns}], 'default', 'value' => {$value}]";
             }
         }
@@ -298,13 +298,13 @@ class Generator extends \yii\gii\generators\model\Generator
                             $requiredColumns[] = $column->name;
                         }
                         if (!is_array($enumWiVa) || !in_array($table->name, $enumWiVa)) {
-                            $enumValues = "'".implode("', '", $enumValues)."'";
+                            $enumValues = "'" . implode("', '", $enumValues) . "'";
                             $inRules[serialize($enumValues)][] = $column->name;
                         }
                     }
                     if (strncasecmp($column->dbType, 'set', 3) == 0) {
                         if (!is_array($enumWiVa) || !in_array($table->name, $enumWiVa)) {
-                            $enumValues = "'".implode("', '", $enumValues)."'";
+                            $enumValues = "'" . implode("', '", $enumValues) . "'";
                             $eachInRules[serialize($enumValues)][] = $column->name;
                         }
                     }
@@ -313,14 +313,14 @@ class Generator extends \yii\gii\generators\model\Generator
             if ($inRules) {
                 foreach ($inRules as $values => $columns) {
                     $values = unserialize($values);
-                    $columns = "'".implode("', '", $columns)."'";
+                    $columns = "'" . implode("', '", $columns) . "'";
                     $rules[] = "[[{$columns}], 'in', 'range' => [{$values}], 'strict' => true]";
                 }
             }
             if ($eachInRules) {
                 foreach ($eachInRules as $values => $columns) {
                     $values = unserialize($values);
-                    $columns = "'".implode("Array', '", $columns)."Array'";
+                    $columns = "'" . implode("Array', '", $columns) . "Array'";
                     $rules[] = "[[{$columns}], 'each', 'rule' => ['in', 'range' => [{$values}], 'strict' => true]]";
                 }
             }
@@ -355,10 +355,10 @@ class Generator extends \yii\gii\generators\model\Generator
             }
         }
         if ($requiredColumns) {
-            $rules[] = "[['".implode("', '", $requiredColumns)."'], 'required']";
+            $rules[] = "[['" . implode("', '", $requiredColumns) . "'], 'required']";
         }
         if ($setNullColumns) {
-            $firstRusles[] = "[['".implode("', '", $setNullColumns)."'], 'default', 'value' => null]";
+            $firstRusles[] = "[['" . implode("', '", $setNullColumns) . "'], 'default', 'value' => null]";
         }
         return array_merge($firstRusles, $baseRules, $rules);
     }
@@ -382,7 +382,8 @@ class Generator extends \yii\gii\generators\model\Generator
     {
         $db = $this->getDbConnection();
         $tablePrefix = $db->tablePrefix;
-        foreach ($simpleRelations as $simpleRelation) {
+        $trPairs = [];
+        foreach ($simpleRelations as $simpleRelation) {//var_dump($simpleRelation);//die();
             $fullTableName = $simpleRelation['tableName'];
             $tableName = $fullTableName;
             if ($tablePrefix && strpos($tableName, $tablePrefix) === 0) {
@@ -413,6 +414,17 @@ class Generator extends \yii\gii\generators\model\Generator
             $tableSchema = $db->getTableSchema($fullTableName);
             $newRelName = parent::generateRelationName($relations, $tableSchema, $key, $simpleRelation['relation'][2]);
             $relations[$fullTableName][$newRelName] = $simpleRelation['relation'];
+            if ($simpleRelation['oldName'] != $newRelName) {
+                $tName = $this->generateClassName($fullTableName);
+                $trPairs[$tName]["inverseOf('" . lcfirst($simpleRelation['oldName']) . "')"] = "inverseOf('" . lcfirst($newRelName) . "')";
+            }
+        }
+        foreach ($relations as $tName => &$rlTable) {
+            foreach ($rlTable as &$relation) {
+                if (isset($trPairs[$relation[1]])) {
+                    $relation[0] = strtr($relation[0], $trPairs[$relation[1]]);
+                }
+            }
         }
     }
 
@@ -424,13 +436,26 @@ class Generator extends \yii\gii\generators\model\Generator
             $code = $viaTableRelation['relation'][0];
             $key = $viaTableRelation['relation'][1];
             $multiple = $viaTableRelation['relation'][2];
-            if (preg_match("/viaTable\\('(\{\{%)?(\w+?)(\}\})?',/", $code, $match)) {
+            if (preg_match("/\\['(\\w+?)' => '(\w+?)_\\1'\\]\\)\\->viaTable\\('(\{\{%)?(\w+?)(\}\})?',/", $code, $match)) {
+                if ($multiple) {
+                    $key = Inflector::pluralize($match[2]);
+                    $multiple = false;
+                }
+                $key = $key . 'Via_' . $match[4];
+            } elseif (preg_match("/\\['(\\w+?)' => '(\w+?)'\\]\\)\\->viaTable\\('(\{\{%)?(\w+?)(\}\})?',/", $code, $match)) {
+                if ($multiple) {
+                    $key = Inflector::pluralize($match[2]);
+                    $multiple = false;
+                }
+                $key = $key . 'Via_' . $match[4];
+            } elseif (preg_match("/->viaTable\\('(\{\{%)?(\w+?)(\}\})?',/", $code, $match)) {
                 if ($multiple) {
                     $key = Inflector::pluralize($key);
                     $multiple = false;
                 }
-                $key = $key.'Via_'.$match[2];
+                $key = $key . 'Via_' . $match[2];
             }
+
             $tableSchema = $db->getTableSchema($tableName);
             $newRelName = parent::generateRelationName($relations, $tableSchema, $key, $multiple);
             $relations[$tableName][$newRelName] = $viaTableRelation['relation'];
